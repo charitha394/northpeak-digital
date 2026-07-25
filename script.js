@@ -1,0 +1,134 @@
+// NorthPeak Digital — site interactions
+(function () {
+  'use strict';
+
+  // ---- Footer year ----
+  var yearEl = document.getElementById('year');
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+  // ---- Mobile nav toggle ----
+  var navToggle = document.getElementById('navToggle');
+  var mobileNav = document.getElementById('mobileNav');
+
+  if (navToggle && mobileNav) {
+    navToggle.addEventListener('click', function () {
+      var isOpen = mobileNav.classList.toggle('is-open');
+      navToggle.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    // Close mobile nav after choosing a link
+    mobileNav.querySelectorAll('a').forEach(function (link) {
+      link.addEventListener('click', function () {
+        mobileNav.classList.remove('is-open');
+        navToggle.setAttribute('aria-expanded', 'false');
+      });
+    });
+  }
+
+  // ---- Contact form validation ----
+  var form = document.getElementById('contactForm');
+  if (!form) return;
+
+  var status = document.getElementById('formStatus');
+
+  var validators = {
+    name: function (value) {
+      if (!value.trim()) return 'Please enter your name.';
+      if (value.trim().length < 2) return 'Name looks too short.';
+      return '';
+    },
+    email: function (value) {
+      var re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!value.trim()) return 'Please enter an email address.';
+      if (!re.test(value.trim())) return 'That email address doesn\u2019t look right.';
+      return '';
+    },
+    budget: function (value) {
+      if (!value) return 'Please select a budget range.';
+      return '';
+    },
+    message: function (value) {
+      if (!value.trim()) return 'Tell us a little about the project.';
+      if (value.trim().length < 10) return 'A bit more detail helps \u2014 at least 10 characters.';
+      return '';
+    }
+  };
+
+  function fieldRow(input) {
+    return input.closest('.form-row');
+  }
+
+  function showError(input, message) {
+    var row = fieldRow(input);
+    var errEl = document.getElementById('err-' + input.name);
+    if (errEl) errEl.textContent = message;
+    if (row) row.classList.toggle('has-error', Boolean(message));
+    input.setAttribute('aria-invalid', message ? 'true' : 'false');
+  }
+
+  function validateField(input) {
+    var validator = validators[input.name];
+    if (!validator) return true;
+    var message = validator(input.value);
+    showError(input, message);
+    return !message;
+  }
+
+  // Validate on blur for immediate, non-annoying feedback
+  ['name', 'email', 'budget', 'message'].forEach(function (fieldName) {
+    var input = form.elements[fieldName];
+    if (!input) return;
+    input.addEventListener('blur', function () {
+      validateField(input);
+    });
+    input.addEventListener('input', function () {
+      var row = fieldRow(input);
+      if (row && row.classList.contains('has-error')) {
+        validateField(input);
+      }
+    });
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    var fieldsToCheck = ['name', 'email', 'budget', 'message'];
+    var isValid = true;
+    var firstInvalid = null;
+
+    fieldsToCheck.forEach(function (fieldName) {
+      var input = form.elements[fieldName];
+      if (!input) return;
+      var ok = validateField(input);
+      if (!ok) {
+        isValid = false;
+        if (!firstInvalid) firstInvalid = input;
+      }
+    });
+
+    if (!isValid) {
+      status.textContent = 'Please fix the highlighted fields before sending.';
+      status.className = 'form-status is-error';
+      if (firstInvalid) firstInvalid.focus();
+      return;
+    }
+
+    // No backend is wired up in this demo — simulate a successful send.
+    var submitBtn = form.querySelector('.form-submit');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending\u2026';
+
+    setTimeout(function () {
+      status.textContent = 'Message sent \u2014 we\u2019ll reply within one business day.';
+      status.className = 'form-status is-success';
+      form.reset();
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Send message';
+      // Clear any leftover error states
+      fieldsToCheck.forEach(function (fieldName) {
+        var input = form.elements[fieldName];
+        if (input) showError(input, '');
+      });
+    }, 600);
+  });
+})();
